@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="author" content="DOGGOI Academic Solutions">
+    <meta name="description" content="DOGGOI - Plateforme académique intelligente pour étudiants universitaires">
+    <title>DOGGOI | Suite Académique Intelligente</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #f8fafc 0%, #eef2f8 100%); 
+            min-height: 100vh; 
+            transition: all 0.3s ease; 
+        }
+        body.dark-mode { 
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); 
+            color: #f1f5f9; 
+        }
+        body.dark-mode .card-doggoi, 
+        body.dark-mode .stat-doggoi, 
+        body.dark-mode .task-card, 
+        body.dark-mode .course-modal-content, 
+        body.dark-mode .sidebar { 
+            background: #1e293b; 
+            color: #f1f5f9; 
+            border-color: #334155; 
+        }
+        body.dark-mode .task-header { background: #1e293b; }
+        body.dark-mode .task-header:hover { background: #334155; }
+        body.dark-mode .schedule-table td, 
+        body.dark-mode .schedule-table th { background: #1e293b; border-color: #334155; color: #f1f5f9; }
+        body.dark-mode .course-cell { background: #334155; }
+        body.dark-mode .form-control, 
+        body.dark-mode .form-select { background: #0f172a; border-color: #334155; color: #f1f5f9; }
+        
+        .doggoi-brand { font-family: 'Space Grotesk', monospace; letter-spacing: -0.02em; }
+        .doggoi-icon { 
+            width: 45px; 
+            height: 45px; 
+            background: linear-gradient(135deg, #1e3a5f 0%, #0f2b4a 100%); 
+            border-radius: 14px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            box-shadow: 0 6px 15px rgba(30, 58, 95, 0.3); 
+            position: relative; 
+        }
+        .chad-flag { 
+            position: absolute; 
+            bottom: -8px; 
+            right: -8px; 
+            width: 22px; 
+            height: 16px; 
+            background: linear-gradient(90deg, #002664 33%, #FECB00 33%, #FECB00 66%, #C60C30 66%); 
+            border-radius: 3px; 
+            border: 1px solid rgba(255,255,255,0.5); 
+        }
+        .sidebar { 
+            position: fixed; 
+            left: 0; 
+            top: 0; 
+            height: 100vh; 
+            width: 290px; 
+            background: linear-gradient(180deg, #0f2b4a 0%, #071a2e 100%);
+            z-index: 1000; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            box-shadow: 4px 0 25px rgba(0, 0, 0, 0.15); 
+            overflow-y: auto; 
+        }
+        .sidebar.collapsed { transform: translateX(-290px); }
+        .sidebar-header { padding: 2rem 1.8rem 1.5rem 1.8rem; border-bottom: 1px solid rgba(255, 255, 255, 0.1); text-align: center; }
+        .sidebar-logo { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px; }
+        .sidebar-logo h2 { color: white; font-weight: 800; margin: 0; font-size: 1.8rem; }
+        .sidebar-nav { padding: 1.5rem 1.2rem; }
+        .nav-item-side { 
+            display: flex; 
+            align-items: center; 
+            gap: 14px; 
+            padding: 14px 18px; 
+            margin-bottom: 12px; 
+            border-radius: 18px; 
+            color: rgba(255, 255, 255, 0.75); 
+            transition: all 0.3s ease; 
+            cursor: pointer; 
+            font-weight: 500; 
+        }
+        .nav-item-side:hover { background: rgba(30, 58, 95, 0.4); color: #8bb4e0; transform: translateX(6px); }
+        .nav-item-side.active { background: linear-gradient(95deg, rgba(30, 58, 95, 0.4) 0%, rgba(30, 58, 95, 0.1) 100%); color: #8bb4e0; border-left: 3px solid #1e3a5f; }
+        .main-content { margin-left: 290px; transition: all 0.3s ease; padding: 1.5rem; }
+        .main-content.expanded { margin-left: 0; }
+        .toggle-sidebar { position: fixed; left: 300px; top: 22px; z-index: 1001; background: #1e3a5f; border: none; width: 44px; height: 44px; border-radius: 14px; color: white; transition: all 0.3s ease; cursor: pointer; }
+        .toggle-sidebar.collapsed { left: 20px; }
+        .card-doggoi { 
+            background: white; 
+            border-radius: 24px; 
+            border: none; 
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); 
+            transition: all 0.3s ease; 
+            overflow: hidden; 
+        }
+        .card-doggoi:hover { 
+            transform: translateY(-4px); 
+            box-shadow: 0 12px 32px rgba(30, 58, 95, 0.15); 
+        }
+        .btn-doggoi { background: linear-gradient(135deg, #1e3a5f 0%, #0f2b4a 100%); border: none; color: white; border-radius: 40px; padding: 0.75rem 1.8rem; font-weight: 600; transition: all 0.3s ease; }
+        .btn-doggoi:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(30, 58, 95, 0.4); }
+        .btn-doggoi-outline { background: transparent; border: 2px solid #1e3a5f; color: #1e3a5f; border-radius: 40px; padding: 0.7rem 1.6rem; font-weight: 600; transition: all 0.3s ease; }
+        .btn-doggoi-outline:hover { background: #1e3a5f; color: white; }
+        .stat-doggoi { 
+            background: linear-gradient(135deg, #ffffff 0%, #f5f8fc 100%); 
+            border-radius: 20px; 
+            padding: 1.5rem; 
+            text-align: center; 
+            transition: all 0.3s ease; 
+            border: 1px solid rgba(30, 58, 95, 0.1); 
+        }
+        .schedule-table { width: 100%; border-collapse: collapse; background: white; border-radius: 20px; overflow: hidden; }
+        .schedule-table th { background: #1e3a5f; color: white; padding: 12px; font-weight: 600; }
+        .schedule-table td { border: 1px solid #e9ecef; padding: 12px; text-align: center; vertical-align: middle; }
+        .course-cell { background: #f5f8fc; border-radius: 12px; padding: 8px; cursor: pointer; transition: all 0.2s; }
+        .course-cell:hover { background: #1e3a5f; color: white; }
+        .timer-doggoi { background: linear-gradient(135deg, #0f2b4a 0%, #071a2e 100%); border-radius: 32px; padding: 2rem; text-align: center; color: white; }
+        .task-card { 
+            background: white; 
+            border-radius: 16px; 
+            margin-bottom: 12px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            overflow: hidden; 
+            transition: all 0.3s ease;
+        }
+        .task-card:hover { transform: translateX(5px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .task-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: background 0.2s; }
+        .task-header:hover { background: #f8f9fa; }
+        .task-title-section { display: flex; align-items: center; gap: 12px; flex: 1; }
+        .task-dropdown-icon { transition: transform 0.3s; font-size: 12px; }
+        .task-dropdown-icon.rotated { transform: rotate(90deg); }
+        .task-status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .task-status-badge.completed { background: #d4edda; color: #155724; }
+        .task-status-badge.pending { background: #fff3cd; color: #856404; }
+        .task-details { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; padding: 0 15px; }
+        .task-details.open { max-height: 200px; padding: 0 15px 15px 15px; }
+        .timeline-doggoi { position: relative; padding-left: 20px; }
+        .timeline-item-doggoi { position: relative; padding-bottom: 20px; border-left: 2px solid #1e3a5f; padding-left: 20px; margin-left: 10px; }
+        .timeline-dot-doggoi { position: absolute; left: -8px; top: 0; width: 14px; height: 14px; border-radius: 50%; background: #1e3a5f; }
+        .grade-item { background: #f8f9fa; border-radius: 12px; padding: 10px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .timer-control-group { background: rgba(255,255,255,0.1); border-radius: 20px; padding: 15px; margin-top: 20px; }
+        .custom-timer-input { background: rgba(255,255,255,0.2); border: none; color: white; padding: 10px 15px; border-radius: 12px; width: 100px; text-align: center; font-size: 1.2rem; }
+        .search-bar { border-radius: 40px; padding: 8px 15px; border: 2px solid #e9ecef; transition: all 0.3s; width: 200px; }
+        .search-bar:focus { border-color: #1e3a5f; box-shadow: none; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .page-content { animation: fadeInUp 0.5s ease-out; }
+        .course-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+        .course-modal-content { background: white; border-radius: 28px; padding: 1.8rem; max-width: 400px; width: 90%; }
+        .login-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 2000; display: flex; align-items: center; justify-content: center; }
+        .login-box { background: white; border-radius: 28px; padding: 2rem; max-width: 400px; width: 90%; text-align: center; }
+        @media (max-width: 992px) { .sidebar { transform: translateX(-290px); } .main-content { margin-left: 0; } .toggle-sidebar { left: 20px; } }
+    </style>
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-logo">
+            <div class="doggoi-icon"><i class="fas fa-graduation-cap"></i><div class="chad-flag"></div></div>
+            <h2 class="doggoi-brand">DOGGOI</h2>
+        </div>
+        <div class="sidebar-badge mt-2">Academic Suite</div>
+        <p class="text-white-50 small mt-2 mb-0">Tchad · Plateforme Intelligente</p>
+    </div>
+    <div class="sidebar-nav">
+        <div class="nav-item-side active" data-page="dashboard"><i class="fas fa-chart-line"></i><span>Tableau de bord</span></div>
+        <div class="nav-item-side" data-page="schedule"><i class="fas fa-calendar-alt"></i><span>Emploi du temps</span></div>
+        <div class="nav-item-side" data-page="tasks"><i class="fas fa-tasks"></i><span>Gestion des tâches</span></div>
+        <div class="nav-item-side" data-page="exams"><i class="fas fa-graduation-cap"></i><span>Échéances</span></div>
+        <div class="nav-item-side" data-page="grades"><i class="fas fa-chart-simple"></i><span>Notes</span></div>
+        <div class="nav-item-side" data-page="focus"><i class="fas fa-stopwatch"></i><span>Pomodoro</span></div>
+        <div class="nav-item-side" data-page="analytics"><i class="fas fa-chart-bar"></i><span>Analytiques</span></div>
+    </div>
+    <div class="position-absolute bottom-0 w-100 p-4">
+        <div class="text-center text-white-50 small">
+            <i class="fas fa-shield-alt me-1"></i> Données sécurisées<br>© 2025 DOGGOI Labs · Tchad
+        </div>
+    </div>
+</div>
+
+<button class="toggle-sidebar btn" id="toggleSidebar"><i class="fas fa-bars"></i></button>
+
+<div class="main-content" id="mainContent">
+    <div class="university-header d-flex justify-content-between align-items-center flex-wrap gap-3" style="background: linear-gradient(135deg, #0f2b4a 0%, #071a2e 100%); border-radius: 20px; padding: 1rem 1.8rem; margin-bottom: 1.8rem; color: white;">
+        <div>
+            <h5 class="mb-0"><i class="fas fa-graduation-cap me-2"></i>DOGGOI Academic Suite · Tchad</h5>
+            <small>Département d'Informatique - Plateforme Intelligente</small>
+        </div>
+        <div class="d-flex gap-3 align-items-center flex-wrap">
+            <button onclick="toggleDarkMode()" class="btn btn-sm btn-outline-light rounded-pill"><i class="fas fa-moon"></i> Mode sombre</button>
+            <div class="user-info d-flex align-items-center gap-2">
+                <i class="fas fa-user-circle"></i>
+                <span id="currentUser">Invité</span>
+                <button onclick="logout()" class="btn btn-sm btn-danger rounded-pill ms-2">Déconnexion</button>
+            </div>
+            <span id="currentDateTime" class="small"></span>
+        </div>
+    </div>
+
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-box">
+            <div class="doggoi-icon mx-auto mb-3" style="width:60px;height:60px;"><i class="fas fa-graduation-cap fa-2x"></i></div>
+            <h3 class="fw-bold mb-3">DOGGOI</h3>
+            <p class="text-muted mb-4">Connectez-vous à votre espace académique</p>
+            <input type="text" id="loginUsername" class="form-control mb-3" placeholder="Nom d'utilisateur" style="border-radius:40px;">
+            <input type="password" id="loginPassword" class="form-control mb-3" placeholder="Mot de passe" style="border-radius:40px;">
+            <button onclick="login()" class="btn-doggoi w-100">Connexion</button>
+            <p class="text-muted small mt-3">Demo: admin / admin123 | etudiant / etudiant123</p>
+        </div>
+    </div>
+
+    <div id="dashboardPage" class="page-content" style="display:none;">
+        <div class="mb-4">
+            <h1 class="display-5 fw-bold" style="color:#1e3a5f;"><i class="fas fa-chart-line me-3"></i>Tableau de bord</h1>
+            <p class="text-secondary">Bienvenue sur votre plateforme académique</p>
+        </div>
+        <div class="row g-4 mb-5">
+            <div class="col-6 col-md-3"><div class="stat-doggoi"><i class="fas fa-check-circle fa-2x mb-2" style="color:#1e3a5f;"></i><h3 class="fw-bold mb-0" id="statTotal">0</h3><p class="text-muted mb-0">Tâches totales</p></div></div>
+            <div class="col-6 col-md-3"><div class="stat-doggoi"><i class="fas fa-check-double fa-2x mb-2" style="color:#28a745;"></i><h3 class="fw-bold mb-0" id="statCompleted">0</h3><p class="text-muted mb-0">Terminées</p></div></div>
+            <div class="col-6 col-md-3"><div class="stat-doggoi"><i class="fas fa-hourglass-half fa-2x mb-2" style="color:#ffc107;"></i><h3 class="fw-bold mb-0" id="statPending">0</h3><p class="text-muted mb-0">En cours</p></div></div>
+            <div class="col-6 col-md-3"><div class="stat-doggoi"><i class="fas fa-exclamation-triangle fa-2x mb-2" style="color:#dc3545;"></i><h3 class="fw-bold mb-0" id="statOverdue">0</h3><p class="text-muted mb-0">En retard</p></div></div>
+        </div>
+        <div class="card-doggoi p-4 mb-5">
+            <h5 class="fw-bold mb-3"><i class="fas fa-chart-line me-2" style="color:#1e3a5f;"></i>Productivité</h5>
+            <canvas id="productivityChart" height="100"></canvas>
+        </div>
+        <div class="card-doggoi p-4">
+            <h5 class="fw-bold mb-3"><i class="fas fa-clock me-2" style="color:#1e3a5f;"></i>Prochaines échéances</h5>
+            <div id="upcomingTasks"></div>
+        </div>
+    </div>
+
+    <div id="schedulePage" class="page-content" style="display:none;">
+        <div class="mb-4">
+            <h1 class="display-5 fw-bold" style="color:#1e3a5f;"><i class="fas fa-calendar-alt me-3"></i>Emploi du temps</h1>
+            <p class="text-secondary">Lundi au Dimanche · 07h30 à 17h30</p>
+        </div>
+        <div class="card-doggoi p-4">
+            <div class="d-flex justify-content-between mb-4 flex-wrap gap-3">
+                <button id="generateScheduleBtn" class="btn-doggoi"><i class="fas fa-magic me-2"></i>Générer emploi du temps</button>
+                <button id="exportScheduleBtn" class="btn-doggoi-outline"><i class="fas fa-file-pdf me-2"></i>Exporter PDF</button>
+                <button id="clearScheduleBtn" class="btn btn-outline-danger rounded-pill"><i class="fas fa-trash me-2"></i>Effacer tout</button>
+            </div>
+            <div style="overflow-x:auto" id="scheduleContainer">
+                <table class="schedule-table" id="scheduleTable">
+                    <thead><tr><th>Horaire</th><th>Lundi</th><th>Mardi</th><th>Mercredi</th><th>Jeudi</th><th>Vendredi</th><th>Samedi</th><th>Dimanche</th></tr></thead>
+                    <tbody id="scheduleBody"></tbody>
+                </table>
+            </div>
+            <div class="mt-3 text-muted small"><i class="fas fa-info-circle me-1"></i> Cliquez sur une cellule pour ajouter/modifier un cours</div>
+        </div>
+    </div>
+
+    <div id="tasksPage" class="page-content" style="display:none;">
+        <div class="mb-4">
+            <h1 class="display-5 fw-bold" style="color:#1e3a5f;"><i class="fas fa-tasks me-3"></i>Gestion des tâches</h1>
+        </div>
+        <div class="row">
+            <div class="col-lg-4 mb-4">
+                <div class="card-doggoi p-4">
+                    <h5 class="fw-bold mb-3"><i class="fas fa-plus-circle me-2" style="color:#1e3a5f;"></i>Nouvelle tâche</h5>
+                    <form id="taskForm">
+                        <input type="text" class="form-control mb-3" id="taskTitle" placeholder="Titre" style="border-radius:16px;" required>
+                        <input type="datetime-local" class="form-control mb-3" id="taskDeadline" style="border-radius:16px;">
+                        <select class="form-select mb-3" id="taskCategory" style="border-radius:16px;">
+                            <option value="Cours">📚 Cours</option>
+                            <option value="Révision">🧠 Révision</option>
+                            <option value="Projet">💻 Projet</option>
+                            <option value="Examen">📝 Examen</option>
+                            <option value="TD">📖 TD</option>
+                        </select>
+                        <button type="submit" class="btn-doggoi w-100"><i class="fas fa-save me-2"></i>Ajouter</button>
+                    </form>
+                </div>
+            </div>
+            <div class="col-lg-8">
+                <div class="card-doggoi p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <h5 class="fw-bold mb-0">Liste des tâches</h5>
+                        <div class="d-flex gap-2">
+                            <input type="text" id="taskSearch" class="form-control search-bar" placeholder="🔍 Rechercher...">
+                            <button id="clearTasksBtn" class="btn btn-sm btn-outline-danger rounded-pill"><i class="fas fa-trash me-1"></i>Nettoyer</button>
+                        </div>
+                    </div>
+                    <div id="tasksList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="examsPage" class="page-content" style="display:none;">
+        <div class="mb-4">
+            <h1 class="display-5 fw-bold" style="color:#1e3a5f;"><i class="fas fa-graduation-cap me-3"></i>Échéances académiques</h1>
+        </div>
+        <div class="card-doggoi p-4">
+            <form id="examForm" class="row g-3 mb-4">
+                <div class="col-md-4"><input type="text" class="form-control" id="examTitle" placeholder="Nom" style="border-radius:16px;" required></div>
+                <div class="col-md-3"><input type="date" class="form-control" id="examDate" style="border-radius:16px;" required></div>
+                <div class="col-md-2"><input type="time" class="form-control" id="examTime" style="border-radius:16px;"></div>
+                <div class="col-md-2"><input type="text" class="form-control" id="examLocation" placeholder="Salle" style="border-radius:16px;"></div>
+                <div class="col-md-1"><button type="submit" class="btn-doggoi w-100" style="border-radius:16px;">+</button></div>
+            </form>
+            <div id="examsTimeline"></div>
+        </div>
+    </div>
+
+    <div id="gradesPage" class="page-content" style="display:none;">
+        <div class="mb-4">
+            <h1 class="display-5 fw-bold" style="color:#1e3a5f;"><i class="fas fa-chart-simple me-3"></i>Notes & Moyenne</h1>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card-doggoi p-4">
+                    <h5 class="fw-bold mb-3">Ajouter une note</h5>
+                    <div class="row g-3">
+                        <div class="col-6"><input type="text" id="gradeCourse" class="form-control" placeholder="Matière" style="border-radius:16px;"></div>
+                        <div class="col-4"><input type="number" id="gradeValue" class="form-control" placeholder="Note /20" step="0.5" style="border-radius:16px;"></div>
+                        <div class="col-2"><button onclick="addGrade()" class="btn-doggoi w-100" style="border-radius:16px;">+</button></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card-doggoi p-4 text-center">
+                    <h5 class="fw-bold mb-3">Moyenne Générale</h5>
+                    <div class="display-1 fw-bold" id="averageDisplay" style="color:#1e3a5f;">0.00</div>
+                    <p class="text-muted">/20</p>
+                </div>
+            </div>
+        </div>
+        <div class="card-doggoi p-4">
+            <h5 class="fw-bold mb-3">Relevé des notes</h5>
+            <div id="gradesList"></div>
+        </div>
+    </div>
+
+    <div id="focusPage" class="page-content" style="display:none;">
+        <div class="mb-4">
+            <h1 class="display-5 fw-bold" style="color:#1e3a5f;"><i class="fas fa-stopwatch me-3"></i>Mode Pomodoro</h1>
+            <p class="text-secondary">Personnalisez votre temps de concentration</p>
+        </div>
+        <div class="timer-doggoi">
+            <div class="display-1 fw-bold mb-3" id="timerDisplay" style="font-size:5rem;">25:00</div>
+            <div class="mb-4"><span class="badge bg-warning text-dark px-4 py-2 rounded-pill" id="timerMode">Focus</span></div>
+            <div class="timer-control-group">
+                <div class="row justify-content-center g-3">
+                    <div class="col-auto"><label>Temps Focus (min)</label><input type="number" id="focusTimeInput" class="custom-timer-input" value="25" min="1" max="180" step="1"></div>
+                    <div class="col-auto"><label>Temps Pause (min)</label><input type="number" id="breakTimeInput" class="custom-timer-input" value="5" min="1" max="60" step="1"></div>
+                    <div class="col-auto"><button id="applyTimerSettings" class="btn btn-success rounded-pill mt-4"><i class="fas fa-check me-1"></i>Appliquer</button></div>
+                </div>
+            </div>
+            <div class="btn-group gap-3 flex-wrap justify-content-center mt-4">
+                <button id="startTimer" class="btn-doggoi btn-lg"><i class="fas fa-play me-2"></i>Démarrer</button>
+                <button id="pauseTimer" class="btn btn-outline-light btn-lg rounded-pill"><i class="fas fa-pause me-2"></i>Pause</button>
+                <button id="resetTimer" class="btn btn-outline-light btn-lg rounded-pill"><i class="fas fa-redo me-2"></i>Réinitialiser</button>
+            </div>
+            <div class="mt-4 text-white-50"><i class="fas fa-lightbulb me-2"></i>Personnalisez vos temps de travail et pause</div>
+        </div>
+    </div>
+
+    <div id="analyticsPage" class="page-content" style="display:none;">
+        <div class="mb-4">
+            <h1 class="display-5 fw-bold" style="color:#1e3a5f;"><i class="fas fa-chart-bar me-3"></i>Analytiques</h1>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card-doggoi p-4">
+                    <h5 class="fw-bold mb-3">Répartition par catégorie</h5>
+                    <canvas id="categoryChart" height="200"></canvas>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <div class="card-doggoi p-4">
+                    <h5 class="fw-bold mb-3">Taux de complétion</h5>
+                    <canvas id="completionChart" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="card-doggoi p-4">
+            <h5 class="fw-bold mb-3">Gestion des données</h5>
+            <div class="d-flex gap-3 flex-wrap">
+                <button id="exportData" class="btn-doggoi"><i class="fas fa-download me-2"></i>Exporter JSON</button>
+                <button id="resetData" class="btn btn-outline-danger rounded-pill"><i class="fas fa-trash me-2"></i>Réinitialiser</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentUser = null, tasks = [], exams = [], schedule = {}, grades = [];
+    let openTaskId = null, currentPage = 'dashboard', notificationInterval = null;
+    let timerInterval = null, timerSeconds = 25*60, isFocus = true;
+    let focusMinutes = 25, breakMinutes = 5;
+
+    function login() { 
+        const u=document.getElementById('loginUsername').value, p=document.getElementById('loginPassword').value; 
+        if((u==='admin'&&p==='admin123')||(u==='etudiant'&&p==='etudiant123')){ 
+            currentUser=u; 
+            localStorage.setItem('doggoi_current_user',u); 
+            document.getElementById('loginOverlay').style.display='none'; 
+            document.getElementById('currentUser').innerText=u; 
+            loadUserData(); 
+            startNotificationChecker(); 
+            renderAll(); 
+            navigateTo('dashboard'); 
+        } else alert('Identifiants incorrects'); 
+    }
+    
+    function logout() { 
+        currentUser=null; 
+        localStorage.removeItem('doggoi_current_user'); 
+        document.getElementById('loginOverlay').style.display='flex'; 
+        if(notificationInterval) clearInterval(notificationInterval);
+        if(timerInterval) clearInterval(timerInterval);
+    }
+    
+    function loadUserData() { 
+        const p=`doggoi_${currentUser}_`; 
+        tasks=JSON.parse(localStorage.getItem(p+'tasks')||'[]'); 
+        exams=JSON.parse(localStorage.getItem(p+'exams')||'[]'); 
+        schedule=JSON.parse(localStorage.getItem(p+'schedule')||'{}'); 
+        grades=JSON.parse(localStorage.getItem(p+'grades')||'[]'); 
+        if(tasks.length===0) tasks=[
+            {id:Date.now(),title:"Préparation mémoire",deadline:getFutureDate(5,14),category:"Projet",completed:false,createdAt:Date.now()},
+            {id:Date.now()+1,title:"Révision algorithmique",deadline:getFutureDate(7,10),category:"Révision",completed:false,createdAt:Date.now()}
+        ]; 
+        if(grades.length===0) grades=[{course:"Algorithmique",grade:15},{course:"Base de données",grade:14}]; 
+        saveUserData(); 
+    }
+    
+    function saveUserData() { 
+        const p=`doggoi_${currentUser}_`; 
+        localStorage.setItem(p+'tasks',JSON.stringify(tasks)); 
+        localStorage.setItem(p+'exams',JSON.stringify(exams)); 
+        localStorage.setItem(p+'schedule',JSON.stringify(schedule)); 
+        localStorage.setItem(p+'grades',JSON.stringify(grades)); 
+    }
+    
+    function getFutureDate(days,hour=18){ let d=new Date(); d.setDate(d.getDate()+days); d.setHours(hour,0,0,0); return d.toISOString().slice(0,16); }
+
+    function generateSchedule() {
+        const pendingTasks = tasks.filter(t => !t.completed);
+        if(pendingTasks.length === 0) { alert("⚠️ Aucune tâche en cours. Ajoutez des tâches d'abord !"); return; }
+        const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+        const hours = ['07:30-09:30', '09:30-11:30', '11:30-13:30', '13:30-15:30', '15:30-17:30'];
+        const sorted = [...pendingTasks].sort((a,b) => new Date(a.deadline) - new Date(b.deadline));
+        const newSchedule = {};
+        let taskIndex = 0;
+        for(let day of days) { 
+            for(let hour of hours) { 
+                const key=`${day}_${hour}`; 
+                if(taskIndex < sorted.length) { 
+                    const task=sorted[taskIndex]; 
+                    newSchedule[key]={title:task.title.substring(0,35), room:getRoomForCategory(task.category)}; 
+                    taskIndex++; 
+                } 
+            } 
+        }
+        schedule = newSchedule; 
+        saveUserData(); 
+        renderSchedule();
+        alert(`✅ Emploi du temps généré !\n📚 ${taskIndex} cours planifiés sur la semaine.`);
+    }
+    
+    function clearSchedule() { if(confirm('Effacer tout l\'emploi du temps ?')) { schedule={}; saveUserData(); renderSchedule(); } }
+    
+    function getRoomForCategory(cat) { 
+        const rooms={'Cours':'Amphi A','Révision':'Salle 204','Projet':'Lab Info','Examen':'Amphi B','TD':'Salle TD 12'}; 
+        return rooms[cat]||'Salle DOGGOI'; 
+    }
+    
+    function renderSchedule() {
+        const days = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+        const hours = ['07:30-09:30', '09:30-11:30', '11:30-13:30', '13:30-15:30', '15:30-17:30'];
+        let html = '';
+        for(let hour of hours) {
+            html += '<tr><td class="fw-bold bg-light">'+hour+'</td>';
+            for(let day of days) { 
+                const key=`${day}_${hour}`; 
+                const course=schedule[key]; 
+                html += `<td style="cursor:pointer" onclick="openCourseModal('${day}','${hour}')" class="align-middle">${course ? `<div class="course-cell"><strong>${escapeHtml(course.title)}</strong><br><small>${course.room || ''}</small></div>` : '<span class="text-muted">+ Ajouter</span>'}</td>`; 
+            }
+            html += '</tr>';
+        }
+        const tbody=document.getElementById('scheduleBody'); 
+        if(tbody) tbody.innerHTML=html;
+    }
+    
+    function openCourseModal(day, hour) { 
+        const modalDiv=document.createElement('div'); 
+        modalDiv.className='course-modal'; 
+        const key=`${day}_${hour}`; 
+        const existing=schedule[key]; 
+        modalDiv.innerHTML=`<div class="course-modal-content"><h5 class="fw-bold mb-3"><i class="fas fa-book-open me-2" style="color:#1e3a5f"></i>${day} · ${hour}</h5><input type="text" id="modalCourseTitle" class="form-control mb-3" placeholder="Nom du cours" value="${existing?.title || ''}"><input type="text" id="modalCourseRoom" class="form-control mb-3" placeholder="Salle" value="${existing?.room || ''}"><div class="d-flex gap-2 justify-content-end"><button class="btn btn-secondary" onclick="this.closest('.course-modal').remove()">Annuler</button><button class="btn-doggoi" onclick="saveCourseModal('${day}','${hour}')">Enregistrer</button></div></div>`; 
+        document.body.appendChild(modalDiv); 
+    }
+    
+    window.saveCourseModal=function(day, hour){ 
+        const modalDiv=document.querySelector('.course-modal'); 
+        if(!modalDiv) return; 
+        const title=modalDiv.querySelector('#modalCourseTitle')?.value.trim(); 
+        const room=modalDiv.querySelector('#modalCourseRoom')?.value.trim(); 
+        if(title){ 
+            const key=`${day}_${hour}`; 
+            schedule[key]={title:title,room:room||""}; 
+            saveUserData(); 
+            renderSchedule(); 
+        } 
+        modalDiv.remove(); 
+    }
+
+    async function exportScheduleToPDF() { 
+        const btn=document.getElementById('exportScheduleBtn'); 
+        const originalText=btn.innerHTML; 
+        btn.innerHTML='<span class="spinner-border spinner-border-sm me-2"></span>Génération...'; 
+        btn.disabled=true; 
+        try{ 
+            const container=document.getElementById('scheduleContainer'); 
+            const canvas=await html2canvas(container,{scale:2,backgroundColor:'#ffffff'}); 
+            const imgData=canvas.toDataURL('image/png'); 
+            const {jsPDF}=window.jspdf; 
+            const pdf=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'}); 
+            const imgWidth=280; 
+            const imgHeight=(canvas.height*imgWidth)/canvas.width; 
+            pdf.addImage(imgData,'PNG',5,10,imgWidth,imgHeight); 
+            pdf.save(`DOGGOI_emploi_${new Date().toLocaleDateString('fr-FR')}.pdf`); 
+            alert('✅ PDF exporté !'); 
+        } catch(e){ 
+            console.error(e); 
+            alert('❌ Erreur export'); 
+        } finally{ 
+            btn.innerHTML=originalText; 
+            btn.disabled=false; 
+        } 
+    }
+
+    function applyTimerSettings() {
+        const focusInput = document.getElementById("focusTimeInput");
+        const breakInput = document.getElementById("breakTimeInput");
+        let newFocus = parseInt(focusInput.value);
+        let newBreak = parseInt(breakInput.value);
+        
+        if (isNaN(newFocus) || newFocus < 1 || newFocus > 180) {
+            alert("⚠️ Temps Focus doit être entre 1 et 180 minutes");
+            focusInput.value = focusMinutes;
+            return;
+        }
+        if (isNaN(newBreak) || newBreak < 1 || newBreak > 60) {
+            alert("⚠️ Temps Pause doit être entre 1 et 60 minutes");
+            breakInput.value = breakMinutes;
+            return;
+        }
+        
+        focusMinutes = newFocus;
+        breakMinutes = newBreak;
+        localStorage.setItem("doggoi_focus_time", focusMinutes);
+        localStorage.setItem("doggoi_break_time", breakMinutes);
+        
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+        
+        isFocus = true;
+        timerSeconds = focusMinutes * 60;
+        updateTimerDisplay();
+        if(document.getElementById('timerMode')) document.getElementById('timerMode').innerText = "Focus";
+        
+        alert(`✅ Temps mis à jour : Focus ${focusMinutes} min, Pause ${breakMinutes} min`);
+    }
+    
+    function loadTimerSettings(){
+        const savedFocus = localStorage.getItem("doggoi_focus_time");
+        const savedBreak = localStorage.getItem("doggoi_break_time");
+        if(savedFocus){
+            focusMinutes = parseInt(savedFocus);
+            if(document.getElementById("focusTimeInput")) document.getElementById("focusTimeInput").value = focusMinutes;
+        }
+        if(savedBreak){
+            breakMinutes = parseInt(savedBreak);
+            if(document.getElementById("breakTimeInput")) document.getElementById("breakTimeInput").value = breakMinutes;
+        }
+        timerSeconds = focusMinutes * 60;
+        updateTimerDisplay();
+    }
+    
+    function startTimerCustom(){
+        if(timerInterval) return;
+        timerInterval = setInterval(()=>{
+            timerSeconds--;
+            if(timerSeconds <= 0){
+                playBeep();
+                if(isFocus){
+                    isFocus = false;
+                    timerSeconds = breakMinutes * 60;
+                    if(document.getElementById('timerMode')) document.getElementById('timerMode').innerText = "Pause";
+                    alert("🍅 Focus terminé ! Pause !");
+                }else{
+                    isFocus = true;
+                    timerSeconds = focusMinutes * 60;
+                    if(document.getElementById('timerMode')) document.getElementById('timerMode').innerText = "Focus";
+                    alert("☕ Pause terminée ! Reprise du focus !");
+                }
+            }
+            updateTimerDisplay();
+        },1000);
+    }
+    
+    function pauseTimerCustom() { if(timerInterval){ clearInterval(timerInterval); timerInterval=null; } }
+    function resetTimerCustom() { if(timerInterval) clearInterval(timerInterval); timerInterval=null; isFocus=true; timerSeconds=focusMinutes*60; updateTimerDisplay(); if(document.getElementById('timerMode')) document.getElementById('timerMode').innerText='Focus'; }
+    function updateTimerDisplay() { let mins=Math.floor(timerSeconds/60), secs=timerSeconds%60; if(document.getElementById('timerDisplay')) document.getElementById('timerDisplay').innerText=`${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}`; }
+
+    function renderTasks() {
+        const searchQuery = document.getElementById('taskSearch')?.value.toLowerCase() || '';
+        const filteredTasks = searchQuery ? tasks.filter(t => t.title.toLowerCase().includes(searchQuery)) : tasks;
+        const c=document.getElementById('tasksList'); 
+        if(!c) return; 
+        if(filteredTasks.length===0){c.innerHTML='<div class="text-center text-muted py-4">Aucune tâche trouvée</div>'; return;}
+        c.innerHTML=filteredTasks.map(t=>`<div class="task-card"><div class="task-header" onclick="toggleTaskDetails(${t.id})"><div class="task-title-section"><i class="fas fa-chevron-down task-dropdown-icon ${openTaskId===t.id?'rotated':''}"></i><h6 class="fw-bold mb-0 ${t.completed?'text-decoration-line-through text-muted':''}">${escapeHtml(t.title)}</h6><span class="task-status-badge ${t.completed?'completed':'pending'}">${t.completed?'✓ Terminée':'⏳ En cours'}</span></div><div class="task-actions" onclick="event.stopPropagation()"><button class="btn btn-sm btn-outline-success rounded-pill" onclick="toggleTask(${t.id})"><i class="fas ${t.completed?'fa-undo':'fa-check'}"></i></button><button class="btn btn-sm btn-outline-danger rounded-pill" onclick="deleteTask(${t.id})"><i class="fas fa-trash"></i></button></div></div><div class="task-details ${openTaskId===t.id?'open':''}"><div class="row"><div class="col-12 mb-2"><small class="text-muted"><i class="far fa-calendar me-1"></i> Échéance : ${formatDate(t.deadline)}</small></div><div class="col-12"><span class="badge" style="background:#1e3a5f;color:white;">📌 ${t.category}</span></div></div></div></div>`).join('');
+    }
+    
+    function toggleTask(id){ let t=tasks.find(t=>t.id===id); if(t) t.completed=!t.completed; saveUserData(); renderAll(); }
+    function deleteTask(id){ tasks=tasks.filter(t=>t.id!==id); if(openTaskId===id) openTaskId=null; saveUserData(); renderAll(); }
+    function toggleTaskDetails(id){ openTaskId=openTaskId===id?null:id; renderTasks(); }
+    function addTask(title,deadline,category){ tasks.unshift({id:Date.now(),title,deadline,category,completed:false,createdAt:Date.now()}); saveUserData(); renderAll(); }
+    function addExam(title,date,time,location){ exams.push({id:Date.now(),title,date,time,location}); saveUserData(); renderAll(); }
+    function clearTasks(){ if(confirm('Supprimer les tâches terminées ?')){ tasks=tasks.filter(t=>!t.completed); saveUserData(); renderAll(); } }
+    function addGrade(){ const c=document.getElementById('gradeCourse').value; const g=parseFloat(document.getElementById('gradeValue').value); if(!c||isNaN(g)||g<0||g>20){ alert('Note valide (0-20)'); return; } grades.push({course:c,grade:g}); saveUserData(); renderGrades(); document.getElementById('gradeCourse').value=''; document.getElementById('gradeValue').value=''; }
+    function deleteGrade(idx){ grades.splice(idx,1); saveUserData(); renderGrades(); }
+    function calculateAverage(){ if(grades.length===0) return 0; const sum=grades.reduce((a,g)=>a+g.grade,0); return (sum/grades.length).toFixed(2); }
+    function renderGrades(){ const c=document.getElementById('gradesList'), avg=document.getElementById('averageDisplay'); if(!c) return; if(grades.length===0){c.innerHTML='<div class="text-center text-muted py-4">Aucune note</div>'; if(avg) avg.innerText='0.00'; return;} c.innerHTML=grades.map((g,idx)=>`<div class="grade-item"><div><strong>${escapeHtml(g.course)}</strong></div><div><span class="fw-bold me-3">${g.grade}/20</span><button onclick="deleteGrade(${idx})" class="btn btn-sm btn-outline-danger rounded-pill"><i class="fas fa-trash"></i></button></div></div>`).join(''); if(avg) avg.innerText=calculateAverage(); }
+    function renderExams(){ const c=document.getElementById('examsTimeline'); if(!c) return; if(exams.length===0){c.innerHTML='<div class="text-center text-muted py-4">Aucune épreuve</div>'; return;} const sorted=[...exams].sort((a,b)=>new Date(a.date)-new Date(b.date)); c.innerHTML=`<div class="timeline-doggoi">${sorted.map(e=>`<div class="timeline-item-doggoi"><div class="timeline-dot-doggoi" style="background:#dc3545;"></div><h6 class="fw-bold mb-0">📚 ${escapeHtml(e.title)}</h6><small class="text-muted"><i class="far fa-calendar me-1"></i>${e.date} ${e.time?'à '+e.time:''} ${e.location?'• '+e.location:''}</small></div>`).join('')}</div>`; }
+    function renderUpcomingTasks(){ const c=document.getElementById('upcomingTasks'); if(!c) return; const upcoming=tasks.filter(t=>!t.completed).sort((a,b)=>new Date(a.deadline)-new Date(b.deadline)).slice(0,5); if(upcoming.length===0){c.innerHTML='<div class="text-muted text-center py-3">Aucune tâche à venir</div>'; return;} c.innerHTML=`<div class="timeline-doggoi">${upcoming.map(t=>`<div class="timeline-item-doggoi"><div class="timeline-dot-doggoi"></div><h6 class="fw-bold mb-0">${escapeHtml(t.title)}</h6><small class="text-muted">${formatDate(t.deadline)}</small></div>`).join('')}</div>`; }
+    function renderStats(){ document.getElementById('statTotal').innerText=tasks.length; document.getElementById('statCompleted').innerText=tasks.filter(t=>t.completed).length; document.getElementById('statPending').innerText=tasks.filter(t=>!t.completed).length; document.getElementById('statOverdue').innerText=tasks.filter(t=>!t.completed&&new Date(t.deadline)<new Date()).length; }
+    function renderCharts(){ 
+        const cats=['Cours','Révision','Projet','Examen','TD']; 
+        const counts=cats.map(c=>tasks.filter(t=>t.category===c).length); 
+        const ctx1=document.getElementById('categoryChart'); if(ctx1 && window.categoryChart) window.categoryChart.destroy(); 
+        if(ctx1) window.categoryChart=new Chart(ctx1,{type:'doughnut',data:{labels:cats,datasets:[{data:counts,backgroundColor:['#1e3a5f','#2c5a8c','#3b7bb8','#dc3545','#ffc107']}]}}); 
+        const completed=tasks.filter(t=>t.completed).length, pending=tasks.length-completed; 
+        const ctx2=document.getElementById('completionChart'); if(ctx2 && window.completionChart) window.completionChart.destroy(); 
+        if(ctx2) window.completionChart=new Chart(ctx2,{type:'pie',data:{labels:['Terminées','En cours'],datasets:[{data:[completed,pending],backgroundColor:['#28a745','#ffc107']}]}}); 
+        const last7=[]; 
+        for(let i=6;i>=0;i--){let d=new Date(); d.setDate(d.getDate()-i); let ds=d.toISOString().slice(0,10); let cnt=tasks.filter(t=>t.completed&&new Date(t.createdAt).toISOString().slice(0,10)===ds).length; last7.push(cnt);}
+        const ctx3=document.getElementById('productivityChart'); if(ctx3 && window.productivityChart) window.productivityChart.destroy(); 
+        if(ctx3) window.productivityChart=new Chart(ctx3,{type:'line',data:{labels:['J-6','J-5','J-4','J-3','J-2','Hier','Aujourd\'hui'],datasets:[{label:'Tâches complétées',data:last7,borderColor:'#1e3a5f',backgroundColor:'rgba(30,58,95,0.1)',tension:0.3,fill:true}]}}); 
+    }
+    
+    function formatDate(d){ if(!d) return "Non définie"; let dt=new Date(d); return dt.toLocaleDateString('fr-FR',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'}); }
+    function escapeHtml(s){ return String(s).replace(/[&<>]/g,function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+    
+    function renderAll(){ if(!currentUser) return; renderStats(); renderTasks(); renderUpcomingTasks(); renderExams(); renderSchedule(); renderGrades(); renderCharts(); }
+    
+    function checkDeadlines(){ 
+        const now=new Date(); 
+        tasks.forEach(t=>{ 
+            if(!t.completed&&t.deadline){ 
+                const dl=new Date(t.deadline); 
+                const diff=dl-now; 
+                if(diff>0&&diff<86400000&&!t.notified){ 
+                    t.notified=true; 
+                    alert(`⚠️ Rappel : "${t.title}" dans moins de 24h !`); 
+                    playBeep(); 
+                }
+            }
+        }); 
+        saveUserData(); 
+    }
+    
+    function startNotificationChecker(){ 
+        if(notificationInterval) clearInterval(notificationInterval); 
+        notificationInterval=setInterval(checkDeadlines,60000);
+    }
+    
+    function playBeep(){ try{ let ctx=new (window.AudioContext||window.webkitAudioContext)(); let o=ctx.createOscillator(); let g=ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value=880; g.gain.value=0.3; o.start(); setTimeout(()=>{o.stop(); ctx.close();},400); } catch(e){} }
+    
+    function navigateTo(p){ 
+        document.querySelectorAll('.page-content').forEach(page=>page.style.display='none'); 
+        const pageElem=document.getElementById(`${p}Page`); if(pageElem) pageElem.style.display='block'; 
+        document.querySelectorAll('.nav-item-side').forEach(nav=>nav.classList.remove('active')); 
+        const activeNav=document.querySelector(`[data-page="${p}"]`); if(activeNav) activeNav.classList.add('active'); 
+        currentPage=p; 
+    }
+    
+    function exportData(){ 
+        const data={tasks,exams,schedule,grades}; 
+        const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); 
+        const url=URL.createObjectURL(blob); 
+        const a=document.createElement('a'); 
+        a.href=url; 
+        a.download=`doggoi_backup_${new Date().toISOString().slice(0,19)}.json`; 
+        a.click(); 
+        URL.revokeObjectURL(url); 
+        alert('✅ Données exportées avec succès !');
+    }
+    
+    function resetData(){ if(confirm('⚠️ Réinitialisation complète ? Cette action est irréversible.')){ const p=`doggoi_${currentUser}_`; localStorage.removeItem(p+'tasks'); localStorage.removeItem(p+'exams'); localStorage.removeItem(p+'schedule'); localStorage.removeItem(p+'grades'); loadUserData(); renderAll(); alert('Données réinitialisées'); } }
+    function updateDateTime(){ const now=new Date(); const dateElem=document.getElementById('currentDateTime'); if(dateElem) dateElem.innerHTML=`${now.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'})} - ${now.toLocaleTimeString('fr-FR')}`; }
+    function toggleDarkMode(){ document.body.classList.toggle('dark-mode'); localStorage.setItem('doggoi_darkmode',document.body.classList.contains('dark-mode')); }
+
+    document.querySelectorAll('.nav-item-side').forEach(i=>i.addEventListener('click',()=>navigateTo(i.dataset.page)));
+    const toggleBtn=document.getElementById('toggleSidebar'); if(toggleBtn) toggleBtn.addEventListener('click',()=>{ document.getElementById('sidebar').classList.toggle('collapsed'); document.getElementById('mainContent').classList.toggle('expanded'); toggleBtn.classList.toggle('collapsed'); });
+    const taskForm=document.getElementById('taskForm'); if(taskForm) taskForm.addEventListener('submit',(e)=>{ e.preventDefault(); let t=document.getElementById('taskTitle').value, d=document.getElementById('taskDeadline').value, c=document.getElementById('taskCategory').value; if(!t) return alert('Saisissez un titre'); addTask(t,d,c); e.target.reset(); });
+    const examForm=document.getElementById('examForm'); if(examForm) examForm.addEventListener('submit',(e)=>{ e.preventDefault(); let t=document.getElementById('examTitle').value, d=document.getElementById('examDate').value, tm=document.getElementById('examTime').value, l=document.getElementById('examLocation').value; if(!t||!d) return alert('Champs requis'); addExam(t,d,tm,l); e.target.reset(); });
+    const clearTasksBtn=document.getElementById('clearTasksBtn'); if(clearTasksBtn) clearTasksBtn.addEventListener('click',clearTasks);
+    const generateBtn=document.getElementById('generateScheduleBtn'); if(generateBtn) generateBtn.addEventListener('click',generateSchedule);
+    const exportBtn=document.getElementById('exportScheduleBtn'); if(exportBtn) exportBtn.addEventListener('click',exportScheduleToPDF);
+    const clearScheduleBtn=document.getElementById('clearScheduleBtn'); if(clearScheduleBtn) clearScheduleBtn.addEventListener('click',clearSchedule);
+    const startTimerBtn=document.getElementById('startTimer'); if(startTimerBtn) startTimerBtn.addEventListener('click',startTimerCustom);
+    const pauseTimerBtn=document.getElementById('pauseTimer'); if(pauseTimerBtn) pauseTimerBtn.addEventListener('click',pauseTimerCustom);
+    const resetTimerBtn=document.getElementById('resetTimer'); if(resetTimerBtn) resetTimerBtn.addEventListener('click',resetTimerCustom);
+    const applyTimerBtn=document.getElementById('applyTimerSettings'); if(applyTimerBtn) applyTimerBtn.addEventListener('click',applyTimerSettings);
+    const exportDataBtn=document.getElementById('exportData'); if(exportDataBtn) exportDataBtn.addEventListener('click',exportData);
+    const resetDataBtn=document.getElementById('resetData'); if(resetDataBtn) resetDataBtn.addEventListener('click',resetData);
+    const taskSearch=document.getElementById('taskSearch'); if(taskSearch) taskSearch.addEventListener('input', () => renderTasks());
+
+    const savedUser=localStorage.getItem('doggoi_current_user');
+    if(savedUser){ currentUser=savedUser; document.getElementById('loginOverlay').style.display='none'; document.getElementById('currentUser').innerText=currentUser; loadUserData(); startNotificationChecker(); renderAll(); navigateTo('dashboard'); }
+    if(localStorage.getItem('doggoi_darkmode')==='true') document.body.classList.add('dark-mode');
+    loadTimerSettings();
+    setInterval(updateDateTime,1000); 
+    updateDateTime();
+
+    window.toggleDarkMode=toggleDarkMode; window.deleteGrade=deleteGrade; window.addGrade=addGrade; window.login=login; window.logout=logout; 
+    window.toggleTask=toggleTask; window.deleteTask=deleteTask; window.toggleTaskDetails=toggleTaskDetails; 
+    window.saveCourseModal=saveCourseModal; window.openCourseModal=openCourseModal;
+</script>
+</body>
+</html>
